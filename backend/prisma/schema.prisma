@@ -1,0 +1,197 @@
+// Bilheteria de cinema - Trabalho Final Programação II + Banco de Dados II
+
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Papel {
+  CLIENTE
+  OPERADOR
+}
+
+enum StatusAssento {
+  LIVRE
+  RESERVADO
+  VENDIDO
+}
+
+enum StatusReserva {
+  PENDENTE
+  PAGA
+  EXPIRADA
+  CANCELADA
+}
+
+enum CanalVenda {
+  ONLINE
+  BALCAO
+}
+
+enum MetodoPagamento {
+  PIX
+  CARTAO
+  DINHEIRO
+}
+
+enum StatusIngresso {
+  VALIDO
+  UTILIZADO
+}
+
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  nome      String   @db.VarChar(120)
+  email     String   @unique @db.VarChar(160)
+  senhaHash String   @map("senha_hash") @db.VarChar(100)
+  papel     Papel    @default(CLIENTE)
+  criadoEm  DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  reservas            Reserva[]
+  ingressosValidados  Ingresso[] @relation("ValidadoPor")
+
+  @@map("usuario")
+}
+
+model Filme {
+  id             Int      @id @default(autoincrement())
+  titulo         String   @db.VarChar(160)
+  descricao      String?  @db.Text
+  duracaoMinutos Int      @map("duracao_minutos")
+  classificacao  String   @db.VarChar(10)
+  ativo          Boolean  @default(true)
+  criadoEm       DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  sessoes Sessao[]
+
+  @@index([ativo])
+  @@map("filme")
+}
+
+model Sala {
+  id       Int      @id @default(autoincrement())
+  nome     String   @unique @db.VarChar(60)
+  criadoEm DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  assentos Assento[]
+  sessoes  Sessao[]
+
+  @@map("sala")
+}
+
+model Assento {
+  id     Int    @id @default(autoincrement())
+  salaId Int    @map("sala_id")
+  fila   String @db.VarChar(3)
+  numero Int
+
+  sala             Sala             @relation(fields: [salaId], references: [id], onDelete: Cascade)
+  sessoesAssentos  SessaoAssento[]
+  ingressos        Ingresso[]
+
+  @@unique([salaId, fila, numero])
+  @@map("assento")
+}
+
+model Sessao {
+  id       Int      @id @default(autoincrement())
+  filmeId  Int      @map("filme_id")
+  salaId   Int      @map("sala_id")
+  inicio   DateTime @db.Timestamptz(3)
+  fim      DateTime @db.Timestamptz(3)
+  preco    Decimal  @db.Decimal(10, 2)
+  criadoEm DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  filme     Filme           @relation(fields: [filmeId], references: [id], onDelete: Restrict)
+  sala      Sala            @relation(fields: [salaId], references: [id], onDelete: Restrict)
+  assentos  SessaoAssento[]
+  reservas  Reserva[]
+  ingressos Ingresso[]
+
+  @@index([filmeId])
+  @@index([salaId, inicio])
+  @@index([inicio])
+  @@map("sessao")
+}
+
+/// Mapa de assentos por sessão (gerado por trigger ao inserir uma sessão).
+/// UNIQUE(sessao_id, assento_id) garante uma única linha de estado por assento/sessão.
+model SessaoAssento {
+  id        Int           @id @default(autoincrement())
+  sessaoId  Int           @map("sessao_id")
+  assentoId Int           @map("assento_id")
+  status    StatusAssento @default(LIVRE)
+  reservaId Int?          @map("reserva_id")
+  expiraEm  DateTime?     @map("expira_em") @db.Timestamptz(3)
+
+  sessao  Sessao   @relation(fields: [sessaoId], references: [id], onDelete: Cascade)
+  assento Assento  @relation(fields: [assentoId], references: [id], onDelete: Restrict)
+  reserva Reserva? @relation(fields: [reservaId], references: [id], onDelete: SetNull)
+
+  @@unique([sessaoId, assentoId])
+  @@index([sessaoId, status])
+  @@index([reservaId])
+  @@map("sessao_assento")
+}
+
+model Reserva {
+  id        Int           @id @default(autoincrement())
+  usuarioId Int           @map("usuario_id")
+  sessaoId  Int           @map("sessao_id")
+  status    StatusReserva @default(PENDENTE)
+  canal     CanalVenda    @default(ONLINE)
+  total     Decimal       @db.Decimal(10, 2)
+  expiraEm  DateTime      @map("expira_em") @db.Timestamptz(3)
+  criadoEm  DateTime      @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  usuario   Usuario         @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  sessao    Sessao          @relation(fields: [sessaoId], references: [id], onDelete: Restrict)
+  assentos  SessaoAssento[]
+  pagamento Pagamento?
+  ingressos Ingresso[]
+
+  @@index([usuarioId])
+  @@index([status, expiraEm])
+  @@map("reserva")
+}
+
+model Pagamento {
+  id        Int             @id @default(autoincrement())
+  reservaId Int             @unique @map("reserva_id")
+  metodo    MetodoPagamento
+  valor     Decimal         @db.Decimal(10, 2)
+  pagoEm    DateTime        @default(now()) @map("pago_em") @db.Timestamptz(3)
+
+  reserva Reserva @relation(fields: [reservaId], references: [id], onDelete: Restrict)
+
+  @@index([pagoEm])
+  @@map("pagamento")
+}
+
+/// UNIQUE(sessao_id, assento_id): um assento de uma sessão só pode ter UM ingresso.
+model Ingresso {
+  id            Int            @id @default(autoincrement())
+  codigo        String         @unique @db.VarChar(20)
+  reservaId     Int            @map("reserva_id")
+  sessaoId      Int            @map("sessao_id")
+  assentoId     Int            @map("assento_id")
+  valor         Decimal        @db.Decimal(10, 2)
+  status        StatusIngresso @default(VALIDO)
+  emitidoEm     DateTime       @default(now()) @map("emitido_em") @db.Timestamptz(3)
+  utilizadoEm   DateTime?      @map("utilizado_em") @db.Timestamptz(3)
+  validadoPorId Int?           @map("validado_por_id")
+
+  reserva     Reserva  @relation(fields: [reservaId], references: [id], onDelete: Restrict)
+  sessao      Sessao   @relation(fields: [sessaoId], references: [id], onDelete: Restrict)
+  assento     Assento  @relation(fields: [assentoId], references: [id], onDelete: Restrict)
+  validadoPor Usuario? @relation("ValidadoPor", fields: [validadoPorId], references: [id], onDelete: SetNull)
+
+  @@unique([sessaoId, assentoId])
+  @@index([reservaId])
+  @@map("ingresso")
+}
