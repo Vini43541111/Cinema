@@ -10,6 +10,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   RESERVA_MINUTOS: z.coerce.number().int().min(1).max(60).default(10),
   CORS_ORIGIN: z.string().default('*'),
+  UPLOAD_DIR: z.string().default('uploads'),
 });
 
 const parsed = envSchema.safeParse(process.env);

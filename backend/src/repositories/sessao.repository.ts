@@ -3,7 +3,9 @@ import { prisma } from '../lib/prisma';
 import type { Db } from './db';
 
 const incluirResumo = {
-  filme: { select: { id: true, titulo: true, classificacao: true, duracaoMinutos: true } },
+  filme: {
+    select: { id: true, titulo: true, descricao: true, classificacao: true, duracaoMinutos: true, imagemUrl: true },
+  },
   sala: { select: { id: true, nome: true } },
 } satisfies Prisma.SessaoInclude;
 

@@ -1,7 +1,9 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Sessao } from '@/lib/types';
 import { hora, moeda } from '@/lib/format';
 import { cores, espaco, fonte, raio } from '@/lib/theme';
+import { Capa } from './Capa';
 import { Bloco } from './ui';
 
 export function Classificacao({ valor }: { valor: string }) {
@@ -13,27 +15,29 @@ export function Classificacao({ valor }: { valor: string }) {
   );
 }
 
-/** Agrupa sessões por filme, mostrando os horários como "ingressos" clicáveis. */
-export function FilmeComHorarios({
-  titulo,
-  classificacao,
-  duracao,
-  sessoes,
-  onEscolher,
-}: {
-  titulo: string;
-  classificacao: string;
-  duracao: number;
-  sessoes: Sessao[];
-  onEscolher: (s: Sessao) => void;
-}) {
+export const duracaoTexto = (min: number) => `${Math.floor(min / 60)}h${String(min % 60).padStart(2, '0')}`;
+
+/** Filme do catálogo: capa, sinopse e os horários do dia como "ingressos" clicáveis. */
+export function FilmeComHorarios({ filme, sessoes, onEscolher }: { filme: Sessao['filme']; sessoes: Sessao[]; onEscolher: (s: Sessao) => void }) {
+  const [aberto, setAberto] = useState(false);
   return (
     <Bloco>
-      <View style={s.cabecalho}>
-        <Classificacao valor={classificacao} />
-        <Text style={s.titulo} numberOfLines={2}>{titulo}</Text>
+      <View style={s.topo}>
+        <Capa url={filme.imagemUrl} titulo={filme.titulo} largura={104} />
+        <View style={s.info}>
+          <Text style={s.titulo} numberOfLines={2}>{filme.titulo}</Text>
+          <View style={s.metaLinha}>
+            <Classificacao valor={filme.classificacao} />
+            <Text style={s.meta}>{duracaoTexto(filme.duracaoMinutos)}</Text>
+          </View>
+          {filme.descricao ? (
+            <Pressable onPress={() => setAberto((a) => !a)} accessibilityRole="button" accessibilityLabel={aberto ? 'Recolher sinopse' : 'Ler sinopse completa'}>
+              <Text style={s.sinopse} numberOfLines={aberto ? undefined : 4}>{filme.descricao}</Text>
+              <Text style={s.mais}>{aberto ? 'Ler menos' : 'Ler mais'}</Text>
+            </Pressable>
+          ) : null}
+        </View>
       </View>
-      <Text style={s.meta}>{Math.floor(duracao / 60)}h{String(duracao % 60).padStart(2, '0')}</Text>
       <View style={s.horarios}>
         {sessoes.map((se) => (
           <Bloco key={se.id} onPress={() => onEscolher(se)} estilo={s.horario}>
@@ -48,12 +52,16 @@ export function FilmeComHorarios({
 }
 
 const s = StyleSheet.create({
-  cabecalho: { flexDirection: 'row', alignItems: 'center', gap: espaco.m },
-  titulo: { flex: 1, fontFamily: fonte.titulo, fontSize: 24, lineHeight: 28, color: cores.texto },
-  meta: { color: cores.textoSuave, fontSize: 13 },
-  classif: { minWidth: 30, height: 30, borderRadius: 6, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
-  classifTexto: { color: '#fff', fontWeight: '800', fontSize: 14 },
-  horarios: { flexDirection: 'row', flexWrap: 'wrap', gap: espaco.s, marginTop: espaco.xs },
+  topo: { flexDirection: 'row', gap: espaco.l },
+  info: { flex: 1, gap: 6 },
+  titulo: { fontFamily: fonte.titulo, fontSize: 26, lineHeight: 29, color: cores.texto },
+  metaLinha: { flexDirection: 'row', alignItems: 'center', gap: espaco.s },
+  meta: { color: cores.textoSuave, fontSize: 14 },
+  sinopse: { color: cores.textoSuave, fontSize: 14, lineHeight: 20 },
+  mais: { color: cores.latao, fontSize: 13, marginTop: 2, fontWeight: '600' },
+  classif: { minWidth: 28, height: 28, borderRadius: 6, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  classifTexto: { color: '#fff', fontWeight: '800', fontSize: 13 },
+  horarios: { flexDirection: 'row', flexWrap: 'wrap', gap: espaco.s, marginTop: espaco.s },
   horario: {
     backgroundColor: cores.superficieAlta,
     borderRadius: raio.m,

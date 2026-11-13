@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { Capa } from '@/components/Capa';
 import { MapaAssentos } from '@/components/MapaAssentos';
 import { IngressoCartao } from '@/components/IngressoCartao';
 import { Aviso, Bloco, Botao, Carregando, Opcoes, Tela, Texto, Titulo } from '@/components/ui';
@@ -76,7 +77,9 @@ export default function SessaoAssentos() {
 
   return (
     <Tela>
-      <View>
+      <View style={s.cabecalho}>
+        <Capa url={mapa.sessao.filme.imagemUrl} titulo={mapa.sessao.filme.titulo} largura={64} />
+        <View style={{ flex: 1 }}>
         <Titulo>{mapa.sessao.filme.titulo}</Titulo>
         <Texto suave>
           {mapa.sessao.sala.nome}, {dataHora(mapa.sessao.inicio)}
@@ -84,6 +87,7 @@ export default function SessaoAssentos() {
         <Texto suave>
           {mapa.resumo.livres} de {mapa.resumo.capacidade} lugares livres, {moeda(mapa.sessao.preco)} cada
         </Texto>
+        </View>
       </View>
 
       {vendida ? (
@@ -141,6 +145,7 @@ export default function SessaoAssentos() {
 }
 
 const s = StyleSheet.create({
+  cabecalho: { flexDirection: 'row', gap: espaco.m, alignItems: 'center' },
   rodape: { flexDirection: 'row', alignItems: 'flex-end', gap: espaco.m },
   resumoRotulo: { color: cores.textoSuave, fontSize: 14 },
   total: { fontFamily: fonte.tituloForte, fontSize: 30, color: cores.texto },

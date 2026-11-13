@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
+import multer from 'multer';
 import { authController } from '../controllers/auth.controller';
 import { filmeController } from '../controllers/filme.controller';
 import { ingressoController } from '../controllers/ingresso.controller';
@@ -11,6 +12,9 @@ import { prisma } from '../lib/prisma';
 import { autenticacaoOpcional, autenticar, somenteOperador } from '../middlewares/auth';
 
 export const rotas = Router();
+
+// Upload em memória; o service valida o conteúdo real antes de gravar
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 3 * 1024 * 1024, files: 1 } });
 
 // Proteção contra força bruta: só tentativas de login que FALHAM contam
 const limiteLogin = rateLimit({
@@ -46,6 +50,8 @@ rotas.get('/filmes/:id', filmeController.buscar);
 rotas.post('/filmes', ...somenteOperador, filmeController.criar);
 rotas.put('/filmes/:id', ...somenteOperador, filmeController.atualizar);
 rotas.delete('/filmes/:id', ...somenteOperador, filmeController.excluir);
+rotas.post('/filmes/:id/imagem', ...somenteOperador, upload.single('imagem'), filmeController.enviarImagem);
+rotas.delete('/filmes/:id/imagem', ...somenteOperador, filmeController.removerImagem);
 
 // ---------- Salas e assentos ----------
 rotas.get('/salas', ...somenteOperador, salaController.listar);

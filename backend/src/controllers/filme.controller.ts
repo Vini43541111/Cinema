@@ -26,6 +26,16 @@ export const filmeController = {
     res.json(await filmeService.atualizar(id, validar(filmeAtualizacaoSchema, req.body)));
   },
 
+  async enviarImagem(req: Request, res: Response) {
+    const { id } = validar(idParam, req.params);
+    res.json(await filmeService.definirImagem(id, req.file));
+  },
+
+  async removerImagem(req: Request, res: Response) {
+    const { id } = validar(idParam, req.params);
+    res.json(await filmeService.removerImagem(id));
+  },
+
   async excluir(req: Request, res: Response) {
     const { id } = validar(idParam, req.params);
     await filmeService.excluir(id);

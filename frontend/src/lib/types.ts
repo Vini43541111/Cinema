@@ -15,6 +15,7 @@ export interface Filme {
   descricao: string | null;
   duracaoMinutos: number;
   classificacao: string;
+  imagemUrl: string | null;
   ativo: boolean;
 }
 
@@ -29,7 +30,14 @@ export interface Sessao {
   inicio: string;
   fim: string;
   preco: number;
-  filme: { id: number; titulo: string; classificacao: string; duracaoMinutos: number };
+  filme: {
+    id: number;
+    titulo: string;
+    descricao: string | null;
+    classificacao: string;
+    duracaoMinutos: number;
+    imagemUrl: string | null;
+  };
   sala: { id: number; nome: string };
 }
 

@@ -21,7 +21,7 @@ export default function RootLayout() {
             headerTitleStyle: { fontFamily: fonte.titulo, fontSize: 22 },
             headerShadowVisible: false,
             contentStyle: { backgroundColor: cores.fundo },
-            title: 'Cinema',
+            title: 'Cinema Monox',
           }}
         >
           <Stack.Screen name="index" options={{ headerShown: false }} />

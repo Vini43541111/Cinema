@@ -17,11 +17,27 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { cores, espaco, fonte, raio } from '@/lib/theme';
 
-export function Tela({ children, rolar = true, estilo }: { children: ReactNode; rolar?: boolean; estilo?: StyleProp<ViewStyle> }) {
+export function Tela({
+  children,
+  rolar = true,
+  estilo,
+  rolagemRef,
+}: {
+  children: ReactNode;
+  rolar?: boolean;
+  estilo?: StyleProp<ViewStyle>;
+  rolagemRef?: Ref<ScrollView>;
+}) {
   const conteudo = <View style={[s.conteudo, estilo]}>{children}</View>;
   return (
     <SafeAreaView style={s.tela} edges={['top', 'left', 'right']}>
-      {rolar ? <ScrollView contentContainerStyle={s.rolagem} keyboardShouldPersistTaps="handled">{conteudo}</ScrollView> : conteudo}
+      {rolar ? (
+        <ScrollView ref={rolagemRef} contentContainerStyle={s.rolagem} keyboardShouldPersistTaps="handled">
+          {conteudo}
+        </ScrollView>
+      ) : (
+        conteudo
+      )}
     </SafeAreaView>
   );
 }
@@ -73,14 +89,14 @@ export function Botao({
   );
 }
 
-export function Campo({ rotulo, erro, ref, ...props }: TextInputProps & { rotulo: string; erro?: string; ref?: Ref<TextInput> }) {
+export function Campo({ rotulo, erro, ref, style, ...props }: TextInputProps & { rotulo: string; erro?: string; ref?: Ref<TextInput> }) {
   return (
     <View style={s.campo}>
       <Text style={s.rotulo}>{rotulo}</Text>
       <TextInput
         ref={ref}
         placeholderTextColor={cores.textoSuave}
-        style={[s.input, erro && { borderColor: cores.erro }]}
+        style={[s.input, erro && { borderColor: cores.erro }, style]}
         accessibilityLabel={rotulo}
         {...props}
       />

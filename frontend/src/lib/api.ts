@@ -54,12 +54,45 @@ async function requisicao<T>(metodo: string, caminho: string, corpo?: unknown): 
   return dados as T;
 }
 
+/** Monta a URL completa de uma imagem servida pela API (ex.: /api/uploads/capa.jpg). */
+export function urlImagem(caminho: string | null | undefined): string | null {
+  if (!caminho) return null;
+  if (/^https?:\/\//.test(caminho)) return caminho;
+  if (BASE.startsWith('http')) return new URL(caminho, BASE).toString();
+  return caminho;
+}
+
+/** Envia um arquivo (multipart). Na web converte a URI do seletor em Blob. */
+async function enviarArquivo<T>(caminho: string, campo: string, arquivo: { uri: string; nome: string; tipo: string }): Promise<T> {
+  const form = new FormData();
+  if (Platform.OS === 'web') {
+    const blob = await (await fetch(arquivo.uri)).blob();
+    form.append(campo, blob, arquivo.nome);
+  } else {
+    form.append(campo, { uri: arquivo.uri, name: arquivo.nome, type: arquivo.tipo } as unknown as Blob);
+  }
+  let resp: Response;
+  try {
+    resp = await fetch(`${BASE}${caminho}`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: form,
+    });
+  } catch {
+    throw new ApiError(0, 'Sem conexão com o servidor. Verifique sua internet.');
+  }
+  const dados = await resp.json().catch(() => null);
+  if (!resp.ok) throw new ApiError(resp.status, dados?.erro ?? `Erro ${resp.status}`, dados?.detalhes);
+  return dados as T;
+}
+
 export const api = {
   get: <T>(c: string) => requisicao<T>('GET', c),
   post: <T>(c: string, corpo?: unknown) => requisicao<T>('POST', c, corpo ?? {}),
   put: <T>(c: string, corpo: unknown) => requisicao<T>('PUT', c, corpo),
   patch: <T>(c: string, corpo: unknown) => requisicao<T>('PATCH', c, corpo),
   del: <T = void>(c: string) => requisicao<T>('DELETE', c),
+  upload: enviarArquivo,
 };
 
 export const mensagemErro = (e: unknown) => (e instanceof Error ? e.message : 'Algo deu errado. Tente novamente.');

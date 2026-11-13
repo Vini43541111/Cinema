@@ -1,5 +1,7 @@
-import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useRef, useState } from 'react';
+import * as ImagePicker from 'expo-image-picker';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Capa } from '@/components/Capa';
 import { Classificacao } from '@/components/SessaoItem';
 import { Aviso, Bloco, Botao, Campo, Carregando, confirmar, Linha, Opcoes, Subtitulo, Tela, Texto, Titulo, Vazio } from '@/components/ui';
 import { api, mensagemErro } from '@/lib/api';
@@ -12,8 +14,10 @@ type Aba = 'filmes' | 'salas' | 'sessoes';
 
 export default function Cadastros() {
   const [aba, setAba] = useState<Aba>('sessoes');
+  const rolagem = useRef<ScrollView>(null);
+  const irParaTopo = () => rolagem.current?.scrollTo({ y: 0, animated: true });
   return (
-    <Tela>
+    <Tela rolagemRef={rolagem}>
       <Titulo>Cadastros</Titulo>
       <Opcoes
         valor={aba}
@@ -24,7 +28,7 @@ export default function Cadastros() {
           { valor: 'salas', rotulo: 'Salas' },
         ]}
       />
-      {aba === 'filmes' ? <Filmes /> : aba === 'salas' ? <Salas /> : <Sessoes />}
+      {aba === 'filmes' ? <Filmes aoEditar={irParaTopo} /> : aba === 'salas' ? <Salas /> : <Sessoes />}
     </Tela>
   );
 }
@@ -49,51 +53,119 @@ function useEnvio() {
 
 /* ---------------------------- Filmes ---------------------------- */
 const CLASSIFICACOES = ['L', '10', '12', '14', '16', '18'] as const;
+type ImagemEscolhida = { uri: string; nome: string; tipo: string };
 
-function Filmes() {
+async function escolherImagem(): Promise<ImagemEscolhida | string | null> {
+  const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [2, 3], quality: 0.85 });
+  if (r.canceled || !r.assets[0]) return null;
+  const a = r.assets[0];
+  if (a.fileSize && a.fileSize > 3 * 1024 * 1024) return 'A imagem deve ter no máximo 3 MB.';
+  const tipo = a.mimeType ?? 'image/jpeg';
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(tipo)) return 'Use uma imagem JPG, PNG ou WEBP.';
+  return { uri: a.uri, nome: a.fileName ?? `capa.${tipo.split('/')[1]}`, tipo };
+}
+
+function Filmes({ aoEditar }: { aoEditar: () => void }) {
   const lista = useCarregar(() => api.get<Filme[]>('/filmes?todos=true'));
+  const [editando, setEditando] = useState<Filme | null>(null);
   const [titulo, setTitulo] = useState('');
   const [descricao, setDescricao] = useState('');
   const [duracao, setDuracao] = useState('');
   const [classificacao, setClassificacao] = useState<string | null>(null);
+  const [imagem, setImagem] = useState<ImagemEscolhida | null>(null);
   const { enviando, msg, setMsg, executar } = useEnvio();
+
+  const limpar = () => {
+    setEditando(null);
+    setTitulo('');
+    setDescricao('');
+    setDuracao('');
+    setClassificacao(null);
+    setImagem(null);
+  };
+
+  const editar = (f: Filme) => {
+    setEditando(f);
+    setTitulo(f.titulo);
+    setDescricao(f.descricao ?? '');
+    setDuracao(String(f.duracaoMinutos));
+    setClassificacao(f.classificacao);
+    setImagem(null);
+    setMsg(null);
+    aoEditar();
+  };
+
+  const selecionarCapa = async () => {
+    const r = await escolherImagem();
+    if (typeof r === 'string') setMsg({ tipo: 'erro', texto: r });
+    else if (r) setImagem(r);
+  };
 
   const salvar = () => {
     const min = Number(duracao);
     if (!titulo.trim()) return setMsg({ tipo: 'erro', texto: 'Informe o título.' });
     if (!Number.isInteger(min) || min <= 0) return setMsg({ tipo: 'erro', texto: 'Informe a duração em minutos.' });
     if (!classificacao) return setMsg({ tipo: 'erro', texto: 'Escolha a classificação indicativa.' });
+    const dados = { titulo, descricao: descricao.trim() || null, duracaoMinutos: min, classificacao };
     void executar(async () => {
-      await api.post('/filmes', { titulo, descricao: descricao || null, duracaoMinutos: min, classificacao });
-      setTitulo('');
-      setDescricao('');
-      setDuracao('');
-      setClassificacao(null);
+      const filme = editando ? await api.put<Filme>(`/filmes/${editando.id}`, dados) : await api.post<Filme>('/filmes', dados);
+      if (imagem) await api.upload(`/filmes/${filme.id}/imagem`, 'imagem', imagem);
+      limpar();
       await lista.recarregar(true);
-    }, 'Filme cadastrado.');
+    }, editando ? 'Filme atualizado.' : 'Filme cadastrado.');
   };
+
+  const capaPrevia = imagem?.uri ?? editando?.imagemUrl ?? null;
 
   return (
     <>
       <Bloco>
-        <Subtitulo>Novo filme ou evento</Subtitulo>
-        <Campo rotulo="Título" value={titulo} onChangeText={setTitulo} />
-        <Campo rotulo="Sinopse (opcional)" value={descricao} onChangeText={setDescricao} multiline />
-        <Campo rotulo="Duração (minutos)" value={duracao} onChangeText={(t) => setDuracao(t.replace(/\D/g, ''))} keyboardType="number-pad" />
+        <Subtitulo>{editando ? `Editar: ${editando.titulo}` : 'Novo filme ou evento'}</Subtitulo>
+        <Linha estilo={{ alignItems: 'flex-start', gap: espaco.l }}>
+          <Pressable onPress={selecionarCapa} accessibilityRole="button" accessibilityLabel="Escolher imagem do cartaz">
+            <Capa url={capaPrevia} titulo={titulo || 'Sem cartaz'} largura={110} />
+            <Text style={s.trocarCapa}>{capaPrevia ? 'Trocar cartaz' : 'Escolher cartaz'}</Text>
+          </Pressable>
+          <View style={{ flex: 1, gap: espaco.m }}>
+            <Campo rotulo="Título" value={titulo} onChangeText={setTitulo} />
+            <Campo rotulo="Duração (minutos)" value={duracao} onChangeText={(t) => setDuracao(t.replace(/\D/g, ''))} keyboardType="number-pad" />
+          </View>
+        </Linha>
+        <Campo
+          rotulo="Sinopse"
+          value={descricao}
+          onChangeText={setDescricao}
+          multiline
+          numberOfLines={4}
+          maxLength={2000}
+          placeholder="Um resumo curto da história, sem spoilers. Aparece no catálogo."
+          style={{ minHeight: 96, textAlignVertical: 'top' }}
+        />
         <Opcoes rotulo="Classificação indicativa" valor={classificacao} onChange={setClassificacao} opcoes={CLASSIFICACOES.map((c) => ({ valor: c, rotulo: c === 'L' ? 'Livre' : `${c} anos` }))} />
+        <Texto suave estilo={{ fontSize: 13 }}>Cartaz em JPG, PNG ou WEBP, até 3 MB, de preferência na vertical (2:3).</Texto>
         {msg ? <Aviso tipo={msg.tipo}>{msg.texto}</Aviso> : null}
-        <Botao titulo="Cadastrar filme" onPress={salvar} carregando={enviando} />
+        <Botao titulo={editando ? 'Salvar alterações' : 'Cadastrar filme'} onPress={salvar} carregando={enviando} />
+        {editando ? <Botao titulo="Cancelar edição" variante="fantasma" onPress={limpar} /> : null}
       </Bloco>
 
       {lista.carregando && !lista.dados ? <Carregando /> : null}
       {lista.dados?.map((f) => (
         <Bloco key={f.id} estilo={!f.ativo && { opacity: 0.6 }}>
-          <Linha>
-            <Classificacao valor={f.classificacao} />
-            <Texto estilo={{ flex: 1, fontWeight: '700' }}>{f.titulo}</Texto>
-            <Texto suave>{f.duracaoMinutos} min</Texto>
+          <Linha estilo={{ alignItems: 'flex-start', gap: espaco.m }}>
+            <Capa url={f.imagemUrl} titulo={f.titulo} largura={56} />
+            <View style={{ flex: 1, gap: 4 }}>
+              <Linha>
+                <Classificacao valor={f.classificacao} />
+                <Texto estilo={{ flex: 1, fontWeight: '700' }}>{f.titulo}</Texto>
+              </Linha>
+              <Texto suave estilo={{ fontSize: 13 }}>
+                {f.duracaoMinutos} min{f.ativo ? '' : ', fora de cartaz'}
+              </Texto>
+              {f.descricao ? <Texto suave estilo={{ fontSize: 13 }}>{f.descricao.length > 110 ? `${f.descricao.slice(0, 110)}…` : f.descricao}</Texto> : null}
+            </View>
           </Linha>
-          <Linha>
+          <Linha estilo={{ flexWrap: 'wrap' }}>
+            <Botao titulo="Editar" variante="secundario" onPress={() => editar(f)} />
             <Botao
               titulo={f.ativo ? 'Tirar de cartaz' : 'Voltar ao cartaz'}
               variante="secundario"
@@ -266,5 +338,6 @@ function Sessoes() {
 }
 
 const s = StyleSheet.create({
+  trocarCapa: { color: cores.latao, fontSize: 13, fontWeight: '600', textAlign: 'center', marginTop: 6 },
   sessaoTitulo: { color: cores.texto, fontWeight: '700', fontSize: 15, marginBottom: espaco.xs },
 });

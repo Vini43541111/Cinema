@@ -30,7 +30,8 @@ export default function Login() {
   return (
     <Tela estilo={s.tela}>
       <View style={s.marca}>
-        <Text style={s.logo}>Cinema</Text>
+        <Text style={s.logoPequeno}>Cinema</Text>
+        <Text style={s.logo}>Monox</Text>
         <Texto suave>Escolha a sessão, o seu lugar e pronto.</Texto>
       </View>
       <Campo rotulo="E-mail" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" />
@@ -45,6 +46,7 @@ export default function Login() {
 const s = StyleSheet.create({
   tela: { justifyContent: 'center', maxWidth: 420 },
   marca: { marginBottom: espaco.xl, gap: espaco.xs },
-  logo: { fontFamily: fonte.tituloForte, fontSize: 56, lineHeight: 58, color: cores.latao },
+  logoPequeno: { fontFamily: fonte.titulo, fontSize: 26, lineHeight: 26, color: cores.texto, letterSpacing: 6 },
+  logo: { fontFamily: fonte.tituloForte, fontSize: 72, lineHeight: 72, color: cores.latao },
   link: { color: cores.latao, textAlign: 'center', padding: espaco.m, fontSize: 15 },
 });

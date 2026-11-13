@@ -1,4 +1,4 @@
-# API — Cinema
+# API — Cinema Monox
 
 Base: `https://SEU_DOMINIO/api` · JSON · Autenticação: `Authorization: Bearer <token>`
 
@@ -22,6 +22,10 @@ Erros: `{ "erro": "mensagem", "detalhes": ... }` — 400 dados inválidos · 401
 | POST | `/filmes` | operador | `{ titulo, descricao?, duracaoMinutos, classificacao: L\|10\|12\|14\|16\|18 }` |
 | PUT | `/filmes/:id` | operador | campos parciais + `ativo?` |
 | DELETE | `/filmes/:id` | operador | (só se não houver sessões) |
+| POST | `/filmes/:id/imagem` | operador | `multipart/form-data`, campo `imagem` (JPG/PNG/WEBP, até 3 MB; formato validado pelo conteúdo) |
+| DELETE | `/filmes/:id/imagem` | operador | remove o cartaz |
+
+As capas ficam em `/api/uploads/<nome-aleatório>` e o campo `imagemUrl` do filme aponta para elas.
 
 ## Salas
 | Método | Rota | Acesso | Corpo |

@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
+import { MulterError } from 'multer';
 import { AppError } from '../lib/errors';
 
 export function rotaNaoEncontrada(req: Request, res: Response) {
@@ -10,6 +11,10 @@ export function rotaNaoEncontrada(req: Request, res: Response) {
 export function tratarErros(err: unknown, _req: Request, res: Response, _next: NextFunction) {
   if (err instanceof AppError) {
     return res.status(err.status).json({ erro: err.message, detalhes: err.detalhes });
+  }
+  if (err instanceof MulterError) {
+    const msg = err.code === 'LIMIT_FILE_SIZE' ? 'A imagem deve ter no máximo 3 MB' : 'Upload inválido';
+    return res.status(400).json({ erro: msg });
   }
   if (err instanceof SyntaxError && 'body' in err) {
     return res.status(400).json({ erro: 'JSON inválido' });

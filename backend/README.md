@@ -1,4 +1,4 @@
-# 🎬 Cinema API — Bilheteria com marcação de assentos
+# 🎬 Cinema Monox — API da bilheteria com marcação de assentos
 
 Back-end do Trabalho Final de **Programação II + Banco de Dados II** (UNOESC Chapecó).
 

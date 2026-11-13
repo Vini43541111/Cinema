@@ -53,9 +53,7 @@ export function ListaSessoes() {
         porFilme.map((sessoes) => (
           <FilmeComHorarios
             key={sessoes[0].filme.id}
-            titulo={sessoes[0].filme.titulo}
-            classificacao={sessoes[0].filme.classificacao}
-            duracao={sessoes[0].filme.duracaoMinutos}
+            filme={sessoes[0].filme}
             sessoes={sessoes}
             onEscolher={(se) => router.push(`/sessao/${se.id}`)}
           />

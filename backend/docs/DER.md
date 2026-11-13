@@ -30,6 +30,7 @@ erDiagram
         text descricao
         int duracao_minutos "CHECK > 0"
         varchar classificacao
+        varchar imagem_url "cartaz (opcional)"
         boolean ativo
     }
     SALA {

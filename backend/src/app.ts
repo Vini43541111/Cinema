@@ -2,6 +2,7 @@ import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
 import { env } from './config/env';
+import { PASTA_UPLOADS } from './lib/uploads';
 import { rotaNaoEncontrada, tratarErros } from './middlewares/erro';
 import { rotas } from './routes';
 import './types';
@@ -18,6 +19,8 @@ app.use(
 );
 app.use(express.json({ limit: '100kb' }));
 
+// Capas dos filmes (nomes aleatórios, só leitura)
+app.use('/api/uploads', express.static(PASTA_UPLOADS, { maxAge: '30d', immutable: true, index: false, dotfiles: 'deny' }));
 app.use('/api', rotas);
 app.use(rotaNaoEncontrada);
 app.use(tratarErros);
