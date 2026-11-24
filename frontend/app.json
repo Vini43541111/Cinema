@@ -32,7 +32,13 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "A câmera é usada para ler o QR code dos ingressos na entrada."
+        }
+      ]
     ],
     "scheme": "cinema"
   }
